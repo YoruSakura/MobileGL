@@ -80,11 +80,12 @@ jobs:
       # for release distribution; future CI runs will have different signatures.
       - name: Prepare experimental fork signing
         run: |
-          keytool -genkeypair -keystore android-plugin/keystore.jks \
+          keytool -genkeypair -keystore android-plugin/g925-test-ci.jks \
             -storetype JKS -storepass mobilegl-ci-experiment \
             -keypass mobilegl-ci-experiment -alias g925-test \
             -keyalg RSA -keysize 3072 -validity 3650 \
             -dname "CN=MobileGL G925 CI Experiment" -noprompt
+          echo 'MOBILEGL_SIGNING_KEYSTORE=../g925-test-ci.jks' >> "$GITHUB_ENV"
           echo 'SIGNING_STORE_PASSWORD=mobilegl-ci-experiment' >> "$GITHUB_ENV"
           echo 'SIGNING_KEY_ALIAS=g925-test' >> "$GITHUB_ENV"
           echo 'SIGNING_KEY_PASSWORD=mobilegl-ci-experiment' >> "$GITHUB_ENV"
