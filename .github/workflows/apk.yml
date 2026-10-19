@@ -6,6 +6,7 @@ on:
       - dev
       - Feat/Backend-Direct-GLES
       - Feat/Backend-Direct-Vulkan
+      - fix/g925-safe-gles-uploads
   workflow_dispatch:
 
 jobs:
