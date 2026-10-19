@@ -6,6 +6,7 @@ on:
       - dev
       - Feat/Backend-Direct-GLES
       - Feat/Backend-Direct-Vulkan
+      - fix/g925-safe-gles-uploads
   workflow_dispatch:
 
 jobs:
@@ -74,12 +75,23 @@ jobs:
         working-directory: 3rdparty/glslang
         run: python update_glslang_sources.py
 
+      # Forks do not inherit the upstream repository's signing keystore or secrets.
+      # Generate a throwaway test key for this experiment only. Do NOT use this
+      # for release distribution; future CI runs will have different signatures.
+      - name: Prepare experimental fork signing
+        run: |
+          keytool -genkeypair -keystore android-plugin/g925-test-ci.jks \
+            -storetype JKS -storepass mobilegl-ci-experiment \
+            -keypass mobilegl-ci-experiment -alias g925-test \
+            -keyalg RSA -keysize 3072 -validity 3650 \
+            -dname "CN=MobileGL G925 CI Experiment" -noprompt
+          echo 'MOBILEGL_SIGNING_KEYSTORE=../g925-test-ci.jks' >> "$GITHUB_ENV"
+          echo 'SIGNING_STORE_PASSWORD=mobilegl-ci-experiment' >> "$GITHUB_ENV"
+          echo 'SIGNING_KEY_ALIAS=g925-test' >> "$GITHUB_ENV"
+          echo 'SIGNING_KEY_PASSWORD=mobilegl-ci-experiment' >> "$GITHUB_ENV"
+
       - name: Build plugin APK
-        run: gradle --no-daemon -p android-plugin :app:assemblePluginRelease -Pmobilegl.apkSuffix="${GITHUB_SHA}" -Pmobilegl.logLevel=MOBILEGL_LOG_LEVEL_INFO --parallel --max-workers "$(nproc)"
-        env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: gradle --no-daemon -p android-plugin :app:assemblePluginRelease -Pmobilegl.apkSuffix="${GITHUB_SHA}" -Pmobilegl.applicationIdSuffix=.g925test -Pmobilegl.logLevel=MOBILEGL_LOG_LEVEL_INFO --parallel --max-workers "$(nproc)"
 
       - name: Download ANGLE x86_64 libraries
         run: |
@@ -118,10 +130,6 @@ jobs:
 
       - name: Build retrace APK
         run: gradle --no-daemon -p android-plugin :app:assembleTraceRelease -Pmobilegl.apkSuffix="${GITHUB_SHA}" -Pmobilegl.abis=all -Pmobilegl.debuggableRelease=true -Pmobilegl.logLevel=MOBILEGL_LOG_LEVEL_INFO --parallel --max-workers "$(nproc)"
-        env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
 
       - name: Show ccache stats
         if: always()

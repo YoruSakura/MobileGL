@@ -23,6 +23,7 @@
 #include <Config.h>
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <format>
 
 namespace MobileGL::MG_Backend::DirectGLES {
@@ -859,6 +860,20 @@ namespace MobileGL::MG_Backend::DirectGLES {
         if (!MG_Util::BackendLoader::FillInGLESCapabilities(m_GLESCapabilities, m_GLESFunctions)) {
             MGLOG_E("Failed to fill in GLES capabilities for DirectGLES backend");
             return false;
+        }
+
+        // Experimental G925 workaround: keep the driver on the immediate, client-pointer
+        // upload paths instead of persistent-mapped upload/PBO/UBO rings.  The renderer
+        // check is intentionally narrow: this has not yet been validated on a physical
+        // G925, and unrelated GPUs must retain their usual fast paths.
+        // The existing escape hatches remain available for other devices.
+        const GLubyte* rendererBytes =
+            m_GLESFunctions.glGetString ? m_GLESFunctions.glGetString(GL_RENDERER) : nullptr;
+        if (rendererBytes && std::strstr(reinterpret_cast<const char*>(rendererBytes), "G925") != nullptr) {
+            MG_Config::Features.EsprytDisableUnpackRing = true;
+            MG_Config::Features.EsprytDisableUploadRing = true;
+            MG_Config::Features.EsprytDisableUboRing = true;
+            MGLOG_W("DirectGLES: experimental G925 conservative upload mode; persistent upload rings disabled");
         }
         DirectGLES::SetGLESCapabilities(m_GLESCapabilities);
         // Now that g_GLESCapabilities knows the host extensions, entry points, and ES version,

@@ -51,7 +51,7 @@ fun Project.runGit(vararg arguments: String): String? = runCatching {
         }
 }.getOrNull()
 
-val signingStoreFile = file("../keystore.jks")
+val signingStoreFile = file(System.getenv("MOBILEGL_SIGNING_KEYSTORE") ?: "../keystore.jks")
 val signingStorePassword = System.getenv("SIGNING_STORE_PASSWORD")
 val signingKeyAlias = System.getenv("SIGNING_KEY_ALIAS")
 val signingKeyPassword = System.getenv("SIGNING_KEY_PASSWORD")
